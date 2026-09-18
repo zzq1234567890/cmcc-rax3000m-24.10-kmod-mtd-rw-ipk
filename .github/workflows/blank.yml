@@ -30,6 +30,7 @@ jobs:
           LATEST_COMMIT=$(git ls-remote https://github.com/jclehner/mtd-rw.git HEAD | awk '{print $1}')
           echo "Using Commit: $LATEST_COMMIT"
 
+          # 使用 EOF 包裹 Makefile 内容，避免复杂的转义问题
           cat > package/mtd-rw/Makefile << EOF
 include \$(TOPDIR)/rules.mk
 include \$(INCLUDE_DIR)/kernel.mk
@@ -40,7 +41,7 @@ PKG_RELEASE:=1
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/jclehner/mtd-rw.git
 PKG_SOURCE_DATE:=2024-01-01
-PKG_SOURCE_VERSION:=$LATEST_COMMIT
+PKG_SOURCE_VERSION:=\${LATEST_COMMIT}
 # ⚠️ 第一次运行会失败，请根据日志提示将 'skip' 替换为正确的哈希值
 PKG_MIRROR_HASH:=skip
 
