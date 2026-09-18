@@ -45,14 +45,19 @@ jobs:
         run: |
           cd ${{ env.SDK_DIR }}
           
-          # 关键步骤：更新 feeds 索引，让构建系统识别新包
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          # 创建 feeds.conf 文件，修正 base 源的地址格式
+          cat > feeds.conf << EOF
+          src-git base https://github.com/immortalwrt/immortalwrt.git^tags/v24.10.6
+          src-git packages https://github.com/immortalwrt/packages.git^97af13986bcb1efa6fdcc85af9589dd5640b6e63
+          src-git luci https://github.com/immortalwrt/luci.git^adb3df4dd156ee56cbf0d8a5578f5fb0d48e2685
+          src-git routing https://github.com/openwrt/routing.git^ae3329ee440538aea96443908ac2af7ffa62973d
+          src-git telephony https://github.com/openwrt/telephony.git^92892fa285360b8981f62bf4e0a097e6449e7e33
+          EOF
           
           # 克隆 mtd-rw 源码到 package 目录
           git clone https://github.com/jclehner/mtd-rw.git package/mtd-rw
           
-          # 再次更新 feeds，确保新克隆的包被正确注册
+          # 更新 feeds 索引，让构建系统识别所有包
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
