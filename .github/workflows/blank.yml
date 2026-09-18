@@ -2,15 +2,6 @@ name: Build kmod-mtd-rw for RAX3000M
 
 on:
   workflow_dispatch:
-    inputs:
-      sdk_url:
-        description: 'SDK 下载链接 (留空则使用默认 24.10.6 filogic)'
-        required: false
-        default: ''
-
-permissions:
-  contents: read
-  actions: write
 
 jobs:
   build:
@@ -29,52 +20,37 @@ jobs:
 
       - name: Download SDK
         run: |
-          if [ -z "${{ github.event.inputs.sdk_url }}" ]; then
-            wget https://downloads.immortalwrt.org/releases/24.10.6/targets/mediatek/filogic/immortalwrt-sdk-24.10.6-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64.tar.zst -O sdk.tar.zst
-          else
-            wget "${{ github.event.inputs.sdk_url }}" -O sdk.tar.zst
-          fi
+          wget https://downloads.immortalwrt.org/releases/24.10.6/targets/mediatek/filogic/immortalwrt-sdk-24.10.6-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64.tar.zst -O sdk.tar.zst
 
       - name: Extract SDK
         run: |
           tar -I zstd -xf sdk.tar.zst
           echo "SDK_DIR=$(ls -d immortalwrt-sdk-*/)" >> $GITHUB_ENV
-          echo "SDK Directory is: $(ls -d immortalwrt-sdk-*/)"
 
       - name: Prepare Build Environment
         run: |
           cd ${{ env.SDK_DIR }}
-          
-          # 创建 feeds.conf 文件，修正 base 源的地址格式
-          cat > feeds.conf << EOF
+
+          # 创建最小化的 feeds.conf（只保留 base 源，避免依赖冲突）
+          cat > feeds.conf << 'EOF'
           src-git base https://github.com/immortalwrt/immortalwrt.git^tags/v24.10.6
-          src-git packages https://github.com/immortalwrt/packages.git^97af13986bcb1efa6fdcc85af9589dd5640b6e63
-          src-git luci https://github.com/immortalwrt/luci.git^adb3df4dd156ee56cbf0d8a5578f5fb0d48e2685
-          src-git routing https://github.com/openwrt/routing.git^ae3329ee440538aea96443908ac2af7ffa62973d
-          src-git telephony https://github.com/openwrt/telephony.git^92892fa285360b8981f62bf4e0a097e6449e7e33
           EOF
-          
+
           # 克隆 mtd-rw 源码到 package 目录
           git clone https://github.com/jclehner/mtd-rw.git package/mtd-rw
-          
-          # 清理可能存在的缓存
+
+          # 清理缓存
           rm -rf tmp/
-          
-          # 更新 feeds 索引，并保存日志
-          echo "Updating feeds..."
-          ./scripts/feeds update -a 2>&1 | tee /tmp/feeds_update.log
-          
-          # 安装 feeds 包，并保存日志
-          echo "Installing feeds..."
-          ./scripts/feeds install -a 2>&1 | tee /tmp/feeds_install.log
-          
-          # 生成默认配置
+
+          # 只更新 base 源
+          ./scripts/feeds update base 2>&1 | tee /tmp/feeds.log
+          ./scripts/feeds install -a 2>&1 | tee -a /tmp/feeds.log
+
+          # 生成配置
           make defconfig
-          
+
           # 启用 mtd-rw 模块编译
           echo "CONFIG_PACKAGE_kmod-mtd-rw=m" >> .config
-          
-          # 重新解析配置，确保依赖关系正确
           make defconfig
 
       - name: Compile kmod-mtd-rw
@@ -82,16 +58,29 @@ jobs:
           cd ${{ env.SDK_DIR }}
           make package/mtd-rw/compile V=s
 
+      - name: Debug - List Build Output
+        if: always()
+        run: |
+          cd ${{ env.SDK_DIR }}
+          echo "=== bin/packages 目录结构 ==="
+          find bin/packages -name "*.ipk" 2>/dev/null || echo "未找到 .ipk 文件"
+          echo "=== bin/targets 目录结构 ==="
+          find bin/targets -name "*.ipk" 2>/dev/null || echo "未找到 .ipk 文件"
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: kmod-mtd-rw-ipk
-          path: ${{ env.SDK_DIR }}/bin/packages/*/base/kmod-mtd-rw_*.ipk
+          path: |
+            ${{ env.SDK_DIR }}/bin/packages/*/base/kmod-mtd-rw_*.ipk
+            ${{ env.SDK_DIR }}/bin/packages/aarch64_cortex-a53/base/kmod-mtd-rw_*.ipk
           if-no-files-found: error
 
-      - name: Upload Feeds Logs
+      - name: Upload Debug Logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: feeds-logs
-          path: /tmp/feeds_*.log
+          name: debug-logs
+          path: |
+            /tmp/feeds.log
+            ${{ env.SDK_DIR }}/.config
