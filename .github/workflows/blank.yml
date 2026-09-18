@@ -30,7 +30,6 @@ jobs:
           LATEST_COMMIT=$(git ls-remote https://github.com/jclehner/mtd-rw.git HEAD | awk '{print $1}')
           echo "Using Commit: $LATEST_COMMIT"
 
-          # 使用带引号的 'EOF'，防止 Shell 展开 Makefile 中的变量
           cat > package/mtd-rw/Makefile << 'EOF'
           include $(TOPDIR)/rules.mk
           include $(INCLUDE_DIR)/kernel.mk
@@ -43,23 +42,37 @@ jobs:
           PKG_SOURCE_VERSION:=__LATEST_COMMIT__
           PKG_MIRROR_HASH:=skip
 
+          PKG_MAINTAINER:=Joseph C. Lehner <joseph.c.lehner@gmail.com>
+          PKG_LICENSE:=GPL-2.0
+
           include $(INCLUDE_DIR)/package.mk
 
           define KernelPackage/mtd-rw
             SUBMENU:=Other modules
-            TITLE:=Write-enable MTD partitions
+            TITLE:=Write-enabler for MTD partitions
             FILES:=$(PKG_BUILD_DIR)/mtd-rw.ko
             AUTOLOAD:=$(call AutoLoad,30,mtd-rw)
           endef
 
           define KernelPackage/mtd-rw/description
-            Write-enabler for MTD partitions
+            A kernel module that temporarily makes all MTD partitions writeable.
+          endef
+
+          MAKE_OPTS:= \
+            ARCH="$(LINUX_KARCH)" \
+            CROSS_COMPILE="$(TARGET_CROSS)" \
+            M="$(PKG_BUILD_DIR)"
+
+          define Build/Compile
+            $(MAKE) -C "$(LINUX_DIR)" \
+              $(MAKE_OPTS) \
+              CONFIG_MTD_RW=m \
+              modules
           endef
 
           $(eval $(call KernelPackage,mtd-rw))
           EOF
 
-          # 将占位符替换为实际的 Commit SHA
           sed -i "s/__LATEST_COMMIT__/${LATEST_COMMIT}/" package/mtd-rw/Makefile
 
       - name: Compile
