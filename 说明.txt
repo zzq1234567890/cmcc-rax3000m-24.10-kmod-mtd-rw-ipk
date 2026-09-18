@@ -1,0 +1,14 @@
+# 1. 下载 SDK
+wget https://downloads.immortalwrt.org/releases/24.10.6/targets/mediatek/filogic/immortalwrt-sdk-24.10.6-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64.tar.xz
+
+# 2. 解压并进入
+tar -xJf immortalwrt-sdk-*.tar.xz
+cd immortalwrt-sdk-*
+
+# 3. 克隆 mtd-rw 源码
+git clone https://github.com/jclehner/mtd-rw.git package/mtd-rw
+
+# 4. 编译
+make package/mtd-rw/compile V=s
+
+# 5. 编译好的 ipk 在 bin/packages/aarch64_cortex-a53/base/ 目录下
