@@ -1,0 +1,70 @@
+name: Build kmod-mtd-rw
+
+# 触发条件：手动触发 (workflow_dispatch) 或 推送代码时
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-mtd-rw.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # 使用 Docker 容器环境，预装 OpenWrt 编译所需的基础依赖
+    container:
+      image: ghcr.io/openwrt/rootfs:latest # 使用官方或社区维护的构建镜像，或者使用 ubuntu:22.04 并自行安装依赖
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          apt-get update
+          apt-get install -y build-essential ccache ecj fastjar file g++ gawk \
+          gettext git java-propose-classpath libelf-dev libncurses5-dev \
+          libncursesw5-dev libssl-dev python2.7-dev python3 unzip wget \
+          python3-distutils python3-setuptools python3-dev rsync subversion \
+          swig time xsltproc zlib1g-dev
+
+      - name: Download SDK
+        run: |
+          # 修正了链接，使用通配符匹配正确的 SDK 文件名
+          wget https://downloads.immortalwrt.org/releases/24.10.6/targets/mediatek/filogic/immortalwrt-sdk-24.10.6-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64.tar.xz -O sdk.tar.xz
+          
+      - name: Extract SDK
+        run: |
+          tar -xJf sdk.tar.xz
+          # 获取解压后的文件夹名称，例如 immortalwrt-sdk-24.10.6...
+          echo "SDK_DIR=$(ls -d immortalwrt-sdk-*/)" >> $GITHUB_ENV
+
+      - name: Prepare Build Environment
+        run: |
+          cd ${{ env.SDK_DIR }}
+          
+          # 克隆 mtd-rw 源码到 package 目录
+          git clone https://github.com/jclehner/mtd-rw.git package/mtd-rw
+          
+          # 更新 feeds (虽然 mtd-rw 是外部模块，但为了保险起见)
+          # ./scripts/feeds update -a
+          # ./scripts/feeds install -a
+
+          # 配置编译选项
+          # 我们只需要编译 mtd-rw 模块，不需要编译整个固件
+          # 确保配置中启用了 MTD 支持
+          echo "CONFIG_PACKAGE_kmod-mtd-rw=m" >> .config
+          make defconfig
+
+      - name: Compile Module
+        run: |
+          cd ${{ env.SDK_DIR }}
+          # 开始编译，V=s 显示详细日志
+          make package/mtd-rw/compile V=s
+
+      - name: Find and Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kmod-mtd-rw-ipk
+          # 自动查找编译生成的 ipk 文件，无论架构是什么
+          path: ${{ env.SDK_DIR }}/bin/packages/*/base/kmod-mtd-rw_*.ipk
