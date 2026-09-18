@@ -57,9 +57,16 @@ jobs:
           # 克隆 mtd-rw 源码到 package 目录
           git clone https://github.com/jclehner/mtd-rw.git package/mtd-rw
           
-          # 更新 feeds 索引，让构建系统识别所有包
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          # 清理可能存在的缓存
+          rm -rf tmp/
+          
+          # 更新 feeds 索引，并保存日志
+          echo "Updating feeds..."
+          ./scripts/feeds update -a 2>&1 | tee /tmp/feeds_update.log
+          
+          # 安装 feeds 包，并保存日志
+          echo "Installing feeds..."
+          ./scripts/feeds install -a 2>&1 | tee /tmp/feeds_install.log
           
           # 生成默认配置
           make defconfig
@@ -81,3 +88,10 @@ jobs:
           name: kmod-mtd-rw-ipk
           path: ${{ env.SDK_DIR }}/bin/packages/*/base/kmod-mtd-rw_*.ipk
           if-no-files-found: error
+
+      - name: Upload Feeds Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feeds-logs
+          path: /tmp/feeds_*.log
