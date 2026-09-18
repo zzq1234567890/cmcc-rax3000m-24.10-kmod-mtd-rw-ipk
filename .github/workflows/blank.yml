@@ -26,7 +26,6 @@ jobs:
           cd ${{ env.SDK_DIR }}
           mkdir -p package/mtd-rw
 
-          # 自动获取最新的 Commit ID
           LATEST_COMMIT=$(git ls-remote https://github.com/jclehner/mtd-rw.git HEAD | awk '{print $1}')
           echo "Using Commit: $LATEST_COMMIT"
 
@@ -81,9 +80,13 @@ jobs:
           make defconfig
           make package/mtd-rw/compile V=s
 
+      - name: Verify Artifact Location
+        run: |
+          find ${{ env.SDK_DIR }}/bin -name "*.ipk" -type f
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: kmod-mtd-rw
           path: |
-            ${{ env.SDK_DIR }}/bin/packages/**/*.ipk
+            ${{ env.SDK_DIR }}/bin/targets/**/*.ipk
