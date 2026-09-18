@@ -31,18 +31,52 @@ jobs:
         run: |
           cd ${{ env.SDK_DIR }}
 
-          # 创建最小化的 feeds.conf（只保留 base 源，避免依赖冲突）
+          # 创建最小化 feeds.conf
           cat > feeds.conf << 'EOF'
           src-git base https://github.com/immortalwrt/immortalwrt.git^tags/v24.10.6
           EOF
 
-          # 克隆 mtd-rw 源码到 package 目录
-          git clone https://github.com/jclehner/mtd-rw.git package/mtd-rw
+          # 创建 mtd-rw 包目录
+          mkdir -p package/mtd-rw
+
+          # 克隆 mtd-rw 源码（只取源码文件，不作为 OpenWrt 包）
+          git clone https://github.com/jclehner/mtd-rw.git /tmp/mtd-rw-src
+
+          # 创建 OpenWrt 标准的 Package Makefile
+          cat > package/mtd-rw/Makefile << 'MAKEFILE'
+          include $(TOPDIR)/rules.mk
+          include $(INCLUDE_DIR)/kernel.mk
+
+          PKG_NAME:=mtd-rw
+          PKG_RELEASE:=1
+
+          PKG_SOURCE_PROTO:=git
+          PKG_SOURCE_URL:=https://github.com/jclehner/mtd-rw.git
+          PKG_SOURCE_DATE:=2016-02-14
+          PKG_SOURCE_VERSION:=b6e9811eb5890e5f8e1a8e8e8e8e8e8e8e8e8e8e
+          PKG_MIRROR_HASH:=skip
+
+          include $(INCLUDE_DIR)/package.mk
+
+          define KernelPackage/mtd-rw
+            SUBMENU:=Other modules
+            TITLE:=Write-enable MTD partitions
+            FILES:=$(PKG_BUILD_DIR)/mtd-rw.ko
+            AUTOLOAD:=$(call AutoLoad,30,mtd-rw)
+          endef
+
+          define KernelPackage/mtd-rw/description
+            Kernel module to temporarily disable MTD write protection.
+            Load with: insmod mtd-rw i_want_a_brick=1
+          endef
+
+          $(eval $(call KernelPackage,mtd-rw))
+          MAKEFILE
 
           # 清理缓存
           rm -rf tmp/
 
-          # 只更新 base 源
+          # 更新 feeds
           ./scripts/feeds update base 2>&1 | tee /tmp/feeds.log
           ./scripts/feeds install -a 2>&1 | tee -a /tmp/feeds.log
 
