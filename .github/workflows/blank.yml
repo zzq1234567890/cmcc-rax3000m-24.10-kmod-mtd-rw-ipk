@@ -1,4 +1,4 @@
-name: Build kmod-mtd-rw (Final)
+name: Build kmod-mtd-rw
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ jobs:
           cd ${{ env.SDK_DIR }}
           mkdir -p package/mtd-rw
           
-          # 自动获取最新 Commit ID
+          # 自动获取最新的 Commit ID
           LATEST_COMMIT=$(git ls-remote https://github.com/jclehner/mtd-rw.git HEAD | awk '{print $1}')
           echo "Using Commit: $LATEST_COMMIT"
 
@@ -41,8 +41,8 @@ PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/jclehner/mtd-rw.git
 PKG_SOURCE_DATE:=2024-01-01
 PKG_SOURCE_VERSION:=$LATEST_COMMIT
-# ⚠️ 注意：这里填入你刚才获取的 HASH，或者暂时用 skip (如果 skip 依然报错，必须填入 HASH)
-PKG_MIRROR_HASH:=skip 
+# ⚠️ 第一次运行会失败，请根据日志提示将 'skip' 替换为正确的哈希值
+PKG_MIRROR_HASH:=skip
 
 include \$(INCLUDE_DIR)/package.mk
 
