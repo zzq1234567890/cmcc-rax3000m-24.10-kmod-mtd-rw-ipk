@@ -25,37 +25,42 @@ jobs:
         run: |
           cd ${{ env.SDK_DIR }}
           mkdir -p package/mtd-rw
-          
+
           # 自动获取最新的 Commit ID
           LATEST_COMMIT=$(git ls-remote https://github.com/jclehner/mtd-rw.git HEAD | awk '{print $1}')
           echo "Using Commit: $LATEST_COMMIT"
 
-          # 使用 EOF 包裹 Makefile 内容，避免复杂的转义问题
-          cat > package/mtd-rw/Makefile << EOF
-include \$(TOPDIR)/rules.mk
-include \$(INCLUDE_DIR)/kernel.mk
+          # 使用带引号的 'EOF'，防止 Shell 展开 Makefile 中的变量
+          cat > package/mtd-rw/Makefile << 'EOF'
+          include $(TOPDIR)/rules.mk
+          include $(INCLUDE_DIR)/kernel.mk
 
-PKG_NAME:=mtd-rw
-PKG_RELEASE:=1
+          PKG_NAME:=mtd-rw
+          PKG_RELEASE:=1
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://github.com/jclehner/mtd-rw.git
-PKG_SOURCE_DATE:=2024-01-01
-PKG_SOURCE_VERSION:=\${LATEST_COMMIT}
-# ⚠️ 第一次运行会失败，请根据日志提示将 'skip' 替换为正确的哈希值
-PKG_MIRROR_HASH:=skip
+          PKG_SOURCE_PROTO:=git
+          PKG_SOURCE_URL:=https://github.com/jclehner/mtd-rw.git
+          PKG_SOURCE_VERSION:=__LATEST_COMMIT__
+          PKG_MIRROR_HASH:=skip
 
-include \$(INCLUDE_DIR)/package.mk
+          include $(INCLUDE_DIR)/package.mk
 
-define KernelPackage/mtd-rw
-  SUBMENU:=Other modules
-  TITLE:=Write-enable MTD partitions
-  FILES:=\$(PKG_BUILD_DIR)/mtd-rw.ko
-  AUTOLOAD:=\$(call AutoLoad,30,mtd-rw)
-endef
+          define KernelPackage/mtd-rw
+            SUBMENU:=Other modules
+            TITLE:=Write-enable MTD partitions
+            FILES:=$(PKG_BUILD_DIR)/mtd-rw.ko
+            AUTOLOAD:=$(call AutoLoad,30,mtd-rw)
+          endef
 
-\$(eval \$(call KernelPackage,mtd-rw))
-EOF
+          define KernelPackage/mtd-rw/description
+            Write-enabler for MTD partitions
+          endef
+
+          $(eval $(call KernelPackage,mtd-rw))
+          EOF
+
+          # 将占位符替换为实际的 Commit SHA
+          sed -i "s/__LATEST_COMMIT__/${LATEST_COMMIT}/" package/mtd-rw/Makefile
 
       - name: Compile
         run: |
