@@ -1,0 +1,20 @@
+接着按如下步骤：
+先刷本固件itb
+将附件文件用winscp上传到/tmp下
+opkg install /tmp/kmod-mtd-rw_6.6.133.0~e8776739-r1_aarch64_cortex-a53.ipk
+
+insmod mtd-rw i_want_a_brick=1
+
+
+
+如果无法在线安装这个模块，就要自己编译对应版本固件的内核模块了，我是自己编译的。
+
+2. 恢复BL2 ，FIP，u-boot-env 分区 命令分别是：
+
+mtd write /tmp/bl2-bk.bin bl2
+mtd write /tmp/mt7981-cmcc_rax3000m-nand-fip-expand_UBOOT_DHCP.bin fip
+mtd write /tmp/u-boot-env-bk.bin u-boot-env
+
+3. 重启进旧版uboot 刷老版本 bin格式固件即可
+
+留给有需要的朋友，路过大神可以指点一下看看恢复BL2是否多余？u-boot-env是否没必要恢复呢？
