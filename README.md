@@ -1,5 +1,6 @@
-接着按如下步骤：
-先刷本固件itb
+openwrt24.1 降级到openwrt21.2 接着按如下步骤：
+先刷本固件immortalwrt-24.10.6-mediatek-filogic-cmcc_rax3000m-squashfs-sysupgrade.itb
+
 将附件文件用winscp上传到/tmp下
 opkg install /tmp/kmod-mtd-rw_6.6.133.0~e8776739-r1_aarch64_cortex-a53.ipk
 
