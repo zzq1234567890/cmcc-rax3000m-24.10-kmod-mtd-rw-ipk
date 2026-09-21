@@ -18,4 +18,4 @@ mtd write /tmp/u-boot-env-bk.bin u-boot-env
 
 3. 重启进旧版uboot 刷老版本 bin格式固件即可
 
-留给有需要的朋友，路过大神可以指点一下看看恢复BL2是否多余？u-boot-env是否没必要恢复呢？
+
