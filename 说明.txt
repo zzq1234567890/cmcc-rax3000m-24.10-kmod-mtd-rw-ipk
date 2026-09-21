@@ -1,14 +1,20 @@
-# 1. 下载 SDK
-wget https://downloads.immortalwrt.org/releases/24.10.6/targets/mediatek/filogic/immortalwrt-sdk-24.10.6-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64.tar.xz
+接着按如下步骤：
+先刷本固件itb
+将附件文件用winscp上传到/tmp下
+opkg install /tmp/kmod-mtd-rw_6.6.133.0~e8776739-r1_aarch64_cortex-a53.ipk
 
-# 2. 解压并进入
-tar -xJf immortalwrt-sdk-*.tar.xz
-cd immortalwrt-sdk-*
+insmod mtd-rw i_want_a_brick=1
 
-# 3. 克隆 mtd-rw 源码
-git clone https://github.com/jclehner/mtd-rw.git package/mtd-rw
 
-# 4. 编译
-make package/mtd-rw/compile V=s
 
-# 5. 编译好的 ipk 在 bin/packages/aarch64_cortex-a53/base/ 目录下
+如果无法在线安装这个模块，就要自己编译对应版本固件的内核模块了，我是自己编译的。
+
+2. 恢复BL2 ，FIP，u-boot-env 分区 命令分别是：
+
+mtd write /tmp/bl2-bk.bin bl2
+mtd write /tmp/mt7981-cmcc_rax3000m-nand-fip-expand_UBOOT_DHCP.bin fip
+mtd write /tmp/u-boot-env-bk.bin u-boot-env
+
+3. 重启进旧版uboot 刷老版本 bin格式固件即可
+
+留给有需要的朋友，路过大神可以指点一下看看恢复BL2是否多余？u-boot-env是否没必要恢复呢？
